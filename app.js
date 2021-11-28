@@ -69,43 +69,42 @@ app.use('/admin/categories',adminCategories)
 app.use('/admin/products',adminProducts)
 
 // Setting up validator middlewares
+var expressValidator = require('express-validator');
 app.use(expressValidator({
-    errorFormatter: function(param, msg, value) {
-        var namespace = param.split('.')
-        , root    = namespace.shift()
-        , formParam = root;
-  
-      while(namespace.length) {
-        formParam += '[' + namespace.shift() + ']';
-      }
-      return {
-        param : formParam,
-        msg   : msg,
-        value : value
-      };
-    },
-    customValidators:{
-      isImage : function(value, filename){
-        var extension = (path.extname(filename)).toLowerCase();
-        console.log(extension)
-        switch (extension){
-          case '.jpg':
-            return '.jpg';
-          case '.jpeg':
-            return '.jpeg';
-          case '.png':
-            return '.png';
-          case '':
-            return '.jpg';
-          default:
-            return false;
+        errorFormatter: function (param, msg, value) {
+            var namespace = param.split('.')
+                    , root = namespace.shift()
+                    , formParam = root;
 
+        while (namespace.length) {
+            formParam += '[' + namespace.shift() + ']';
         }
+        return {
+            param: formParam,
+            msg: msg,
+            value: value
+        };
+    },
+    customValidators: {
+        isImage: function(value, filename){
+            var extension = (path.extname(filename)).toLowerCase();
+            switch(extension){
+                case '.jpg' :
+                    return '.jpg'
+                case '.jpeg' :
+                    return '.jpeg'
+                case '.png' :
+                    return '.png'
+                case ' ' :
+                    return '.jpg'
+                default:
+                    return false;
             }
-          }
-  }));
-
+        }
+    }
+}));
 //   Express messages middlewares
+
 
 // Startiong the server 
 const port = 3000;

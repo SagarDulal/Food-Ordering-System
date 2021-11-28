@@ -1,19 +1,21 @@
-
+const multer = require('multer')
 var express = require('express')
 var router = express.Router();
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp')
-var resizeImg = require('resize-img')
-
+var bodyParser = require('body-parser');
+var fileUpload = require('express-fileupload')
+// var resizeImg = require('resize-img')
 var expressValidator = require('express-validator');
+require('../app.js')
+const upload = require('../multer/multer')
+const path = require('path')
+
 router.use(expressValidator()); 
-
-
-
 // Get Product Model
 var Product = require('../models/product')
 
-
+router.use(fileUpload());
 // Get category Model
 var Category = require('../models/category')
 
@@ -47,98 +49,99 @@ router.get('/add-product', (req,res)=>{
             title: title, 
             desc: desc,
             categories:categories,
-            price: price
+            price: price,
     });
 });
 });
 
 
 // Post add Category
+router.post('/add-product', function (req, res) {
 
-router.post('/add-product',(req,res)=>{
-    console.log(title)
-    console.log(desc)
-    console.log(price)
-    
-    var imageFile = typeof req.files.image !== "undefined"? req.files.image.name : "";
-    req.checkBody('title', "Title must have a value").notEmpty();
-    req.checkBody('desc',"Description must have a value").notEmpty();
-    req.checkBody('price',"Price must have a value").isDecimal();
-    req.checkBody('image',"You must upload an image").isImage(imageFile);
-    console.log(imageFile)
+    var imageFile = typeof req.files.image !== "undefined" ? req.files.image.name : "";
+
+    req.checkBody('title', 'Title must have a value.').notEmpty();
+    req.checkBody('desc', 'Description must have a value.').notEmpty();
+    req.checkBody('price', 'Price must have a value.').isDecimal();
+    req.checkBody('image', 'You must upload an image').isImage(imageFile);
+
     var title = req.body.title;
-    var slug = title.replace(/\s+/g,'-').toLowerCase();
-    var desc= req.body.desc;
+    var slug = title.replace(/\s+/g, '-').toLowerCase();
+    var desc = req.body.desc;
     var price = req.body.price;
     var category = req.body.category;
 
-
     var errors = req.validationErrors();
-        if(errors){
-         
-             Category.find((err,categories)=>{
-        res.render('admin/add-product',{    
-            errors: errors,
-            title: title, 
-            desc: desc,
-            categories:categories,
-            price: price
-    });
-             });
 
-        } else{
-            Product.findOne({slug:slug}, function(err, product){
-                if(product){
-                    req.flash('danger',"Page Title Exists, Choose another");
-                    Category.find((err,categories)=>{
-                        res.render('admin/add-product',{    
-                            title: title, 
-                            desc: desc,
-                            categories:categories,
-                            price: price
+    if (errors) {
+        Category.find(function (err, categories) {
+            res.render('admin/add_product', {
+                errors: errors,
+                title: title,
+                desc: desc,
+                categories: categories,
+                price: price
+            });
+        });
+    } else {
+        Product.findOne({slug: slug}, function (err, product) {
+            if (product) {
+                req.flash('danger', 'Product title exists, choose another.');
+                Category.find(function (err, categories) {
+                    res.render('admin/add_product', {
+                        title: title,
+                        desc: desc,
+                        categories: categories,
+                        price: price
                     });
                 });
-                } else {
-                    var price2 = parseFloat(price).toFixed(2);
-                    var product = new Product({
-                        title:title,
-                        slug:slug,
-                        desc:desc,
-                        price2:price2,
-                        category:category,
-                        image:imageFile
+            } else {
+
+                var price2 = parseFloat(price).toFixed(2);
+
+                var product = new Product({
+                    title: title,
+                    slug: slug,
+                    desc: desc,
+                    price: price2,
+                    category: category,
+                    image: imageFile
+                });
+
+                product.save(function (err) {
+                    if (err)
+                        return console.log(err);
+
+                    mkdirp('public/product_images/' + product._id, function (err) {
+                        return console.log(err);
                     });
-                    product.save(function(err){
-                        if(err)return console.log(err)
 
-                        mkdirp('public/product_images/' + product._id,(err)=>{
-                            if(err) return console.log(err)
-                        });
-
-                        mkdirp('public/product_images/' + product._id + '/gallery',(err)=>{
-                            if(err) return console.log(err)
-                        });
-
-                        mkdirp('public/product_images/' + product._id + '/gallery/thumbs',(err)=>{
-                            if(err) return console.log(err)
-                        });
-
-                        if(imageFile != ""){
-                            var productImage  = req.files.image;
-                            var path = 'public/product_image/ '+ product._id + '/' + imageFile;
-
-                            productImage.mv(path,function(err){
-                                return console.log(err)
-                            })
-                        }
-
-                        req.flash('success',"Page succesfully added");
-                        res.redirect('/admin/products')
+                    mkdirp('public/product_images/' + product._id + '/gallery', function (err) {
+                        return console.log(err);
                     });
-                }
-            });
-        }
+
+                    mkdirp('public/product_images/' + product._id + '/gallery/thumbs', function (err) {
+                        return console.log(err);
+                    });
+
+                    if (imageFile != "") {
+                        var productImage = req.files.image;
+                        var path = 'public/product_images/' + product._id + '/' + imageFile;
+
+                        productImage.mv(path, function (err) {
+                            return console.log(err);
+                        });
+                    }
+
+                    req.flash('success', 'Product added!');
+                    res.redirect('/admin/products');
+                });
+            }
+        });
+    }
+
 });
+
 
 
 
